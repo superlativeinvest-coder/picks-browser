@@ -1053,10 +1053,10 @@ export default function PicksApp() {
                 <p className="step-label">3. Bankroll Sizing</p>
                 <h3>{propAnalysis.bankroll.recommendedPct}% recommendation</h3>
                 <div className="card-metrics">
-                  <span>Sleeper {safeCurrency(propAnalysis.bankroll.sleeperAmount)}</span>
-                  <span>PrizePicks {safeCurrency(propAnalysis.bankroll.prizePicksAmount)}</span>
-                  <span>Std {safeCurrency(propAnalysis.bankroll.standardSleeper)} / {safeCurrency(propAnalysis.bankroll.standardPrizePicks)}</span>
-                  <span>Cap {safeCurrency(propAnalysis.bankroll.maxSleeper)} / {safeCurrency(propAnalysis.bankroll.maxPrizePicks)}</span>
+                  <span>Sleeper entry size {safeCurrency(propAnalysis.bankroll.sleeperAmount)}</span>
+                  <span>PrizePicks entry size {safeCurrency(propAnalysis.bankroll.prizePicksAmount)}</span>
+                  <span>Std entry {safeCurrency(propAnalysis.bankroll.standardSleeper)} / {safeCurrency(propAnalysis.bankroll.standardPrizePicks)}</span>
+                  <span>Entry cap {safeCurrency(propAnalysis.bankroll.maxSleeper)} / {safeCurrency(propAnalysis.bankroll.maxPrizePicks)}</span>
                 </div>
                 <ul className="plain-list">
                   {propAnalysis.checklist.map((item) => (
