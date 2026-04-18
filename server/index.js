@@ -1046,6 +1046,7 @@ const buildPropAnalysis = async (state, payload) => {
     manualRoleNote,
     payload.context,
   ].filter(Boolean).length;
+  let aiSummary = "";
   const researchConfidence = getResearchConfidence({
     providerUsed: Boolean(payload.providerUsed),
     sharpConsensus: liveContext.sharpConsensus,
@@ -1080,7 +1081,6 @@ const buildPropAnalysis = async (state, payload) => {
     manualRoleNote ? `Role note: ${manualRoleNote}.` : "",
   ].filter(Boolean);
 
-  let aiSummary = "";
   if (state.settings.aiAnalysisEnabled && getApiKeys(state).openai && payload.useAi) {
     const client = createOpenAIClient(state);
     const response = await client.responses.create({
