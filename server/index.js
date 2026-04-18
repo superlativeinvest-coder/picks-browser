@@ -89,8 +89,40 @@ const slugify = (value = "") => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").
 
 const getPropId = (prop) => [prop.date, prop.player, prop.stat].map(slugify).join("__");
 
-const getResearchConfidence = ({ providerUsed, sharpConsensus, manualRecentAverage, manualSampleSize, notesCount, aiSummary }) => {
+const getResearchConfidence = ({
+  providerUsed,
+  sharpConsensus,
+  manualRecentAverage,
+  manualSampleSize,
+  notesCount,
+  aiSummary,
+  manualMinutes,
+  hasManualContextEdge,
+  lineQuality,
+}) => {
   if (providerUsed && sharpConsensus != null && manualRecentAverage != null && manualSampleSize >= 3) return "high";
+
+  if (
+    sharpConsensus == null &&
+    lineQuality === "FALLBACK" &&
+    manualRecentAverage != null &&
+    manualSampleSize >= 5 &&
+    manualMinutes != null &&
+    manualMinutes >= 28 &&
+    (notesCount >= 2 || aiSummary || hasManualContextEdge)
+  ) {
+    return "high";
+  }
+
+  if (
+    sharpConsensus == null &&
+    manualRecentAverage != null &&
+    manualSampleSize >= 3 &&
+    (notesCount >= 1 || aiSummary || hasManualContextEdge)
+  ) {
+    return "medium";
+  }
+
   if ((sharpConsensus != null || providerUsed) && (manualRecentAverage != null || aiSummary || notesCount > 0)) return "medium";
   return "low";
 };
@@ -1075,6 +1107,9 @@ const buildPropAnalysis = async (state, payload) => {
     manualSampleSize,
     notesCount,
     aiSummary,
+    manualMinutes,
+    hasManualContextEdge,
+    lineQuality: lineSummary.lineQuality,
   });
   const queueBucket = getQueueBucket({
     finalVerdict,
