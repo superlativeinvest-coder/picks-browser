@@ -1082,10 +1082,20 @@ const buildPropAnalysis = async (state, payload) => {
     manualPaceNote ||
     manualRoleNote,
   );
+  const primaryLine = toNumberOrNull(payload.sleeperLine) ?? toNumberOrNull(payload.prizePicksLine);
+  const recentGap = manualRecentAverage != null && primaryLine != null ? round(manualRecentAverage - primaryLine, 1) : null;
   const finalVerdict =
     lineSummary.lineQuality === "SHARP" && !hasManualContextEdge && liveContext.recentGames.average <= Number.parseFloat(payload.sleeperLine || payload.prizePicksLine || 0)
       ? "SKIP"
-      : lineSummary.verdict;
+      : lineSummary.lineQuality === "UNKNOWN" && liveContext.sharpConsensus == null
+        ? manualSampleSize != null && manualSampleSize < 3
+          ? "SKIP"
+          : recentGap != null && recentGap >= 2 && hasManualContextEdge
+            ? "MORE"
+            : recentGap != null && recentGap <= -2
+              ? "LESS"
+              : "SKIP"
+        : lineSummary.verdict;
   const confidence =
     lineSummary.lineQuality === "SOFT"
       ? hasManualContextEdge ? "Medium-High" : "Medium"
