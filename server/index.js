@@ -812,20 +812,41 @@ const getLineValueSummary = ({ sleeperLine, prizePicksLine, sharpConsensus }) =>
   const sleeper = Number.parseFloat(sleeperLine);
   const prizePicks = Number.parseFloat(prizePicksLine);
   const sharp = Number.parseFloat(sharpConsensus);
+  const hasSleeper = Number.isFinite(sleeper);
+  const hasPrizePicks = Number.isFinite(prizePicks);
 
   if (!Number.isFinite(sharp)) {
+    if (hasSleeper && hasPrizePicks) {
+      const gap = round(sleeper - prizePicks, 1);
+      if (Math.abs(gap) >= 0.5) {
+        const lowerApp = sleeper < prizePicks ? "Sleeper" : "PrizePicks";
+        const higherApp = sleeper < prizePicks ? "PrizePicks" : "Sleeper";
+        const verdict = gap < 0 ? "MORE" : "LESS";
+        return {
+          gap,
+          verdict,
+          lineQuality: "FALLBACK",
+          bestApp: lowerApp,
+          leanText:
+            verdict === "MORE"
+              ? `${lowerApp} is ${Math.abs(gap).toFixed(1)} lower than ${higherApp}, so MORE has the provisional line-value edge even without a sharp consensus line.`
+              : `${lowerApp} is ${Math.abs(gap).toFixed(1)} lower than ${higherApp}, so LESS is the safer angle only if you trust ${higherApp}'s higher number more.`,
+        };
+      }
+    }
+
     return {
       gap: null,
       verdict: "ANALYZE",
       lineQuality: "UNKNOWN",
-      bestApp: Number.isFinite(sleeper) ? "Sleeper" : Number.isFinite(prizePicks) ? "PrizePicks" : "Manual",
-      leanText: "Sharp market consensus is missing, so this stays in manual review.",
+      bestApp: hasSleeper ? "Sleeper" : hasPrizePicks ? "PrizePicks" : "Manual",
+      leanText: "Sharp market consensus is missing, so this stays in manual review unless both platform lines create a clear gap.",
     };
   }
 
-  const preferredLine = Number.isFinite(sleeper)
+  const preferredLine = hasSleeper
     ? sleeper
-    : Number.isFinite(prizePicks)
+    : hasPrizePicks
       ? prizePicks
       : Number.NaN;
 
@@ -840,7 +861,7 @@ const getLineValueSummary = ({ sleeperLine, prizePicksLine, sharpConsensus }) =>
   }
 
   const gap = round(preferredLine - sharp, 1);
-  const usingSleeper = Number.isFinite(sleeper);
+  const usingSleeper = hasSleeper;
 
   if (gap <= -1.5) {
     return {
