@@ -682,6 +682,8 @@ const buildAiPlayerResearch = async (state, payload) => {
 };
 
 const buildAiGameRoster = async (state, payload) => {
+  let fallbackGame = null;
+
   try {
     const gamesResponse = await bdlFetch(state, "/v1/games", {
       dates: [payload.date],
@@ -693,6 +695,7 @@ const buildAiGameRoster = async (state, payload) => {
       const awayAbbr = item.visitor_team?.abbreviation;
       return homeAbbr === payload.homeTeam && awayAbbr === payload.awayTeam;
     });
+    fallbackGame = game || null;
 
     if (game?.id) {
       const lineupResponse = await bdlFetch(state, "/v1/lineups", {
@@ -732,7 +735,48 @@ const buildAiGameRoster = async (state, payload) => {
       }
     }
   } catch {
-    // Fall back to AI roster research when live lineup data is unavailable.
+    // Continue to additional fallback paths below.
+  }
+
+  if (fallbackGame?.home_team?.id && fallbackGame?.visitor_team?.id) {
+    try {
+      const [homePlayersResponse, awayPlayersResponse] = await Promise.all([
+        bdlFetch(state, "/v1/players/active", {
+          team_ids: [fallbackGame.home_team.id],
+          per_page: 30,
+        }),
+        bdlFetch(state, "/v1/players/active", {
+          team_ids: [fallbackGame.visitor_team.id],
+          per_page: 30,
+        }),
+      ]);
+
+      const toNames = (response) => (response.data || [])
+        .map((player) => `${player.first_name || ""} ${player.last_name || ""}`.trim())
+        .filter(Boolean);
+
+      const homeNames = [...new Set(toNames(homePlayersResponse))];
+      const awayNames = [...new Set(toNames(awayPlayersResponse))];
+
+      if (homeNames.length || awayNames.length) {
+        return {
+          gameSummary: `Active roster fallback loaded for ${payload.matchup}. Confirm starters manually before using the player browser.`,
+          homeTeam: {
+            name: fallbackGame.home_team.full_name || payload.homeTeam,
+            starters: homeNames.slice(0, 5),
+            bench: homeNames.slice(5, 15),
+          },
+          awayTeam: {
+            name: fallbackGame.visitor_team.full_name || payload.awayTeam,
+            starters: awayNames.slice(0, 5),
+            bench: awayNames.slice(5, 15),
+          },
+          sourceNotes: "BallDontLie lineups were unavailable, so this card falls back to active team rosters.",
+        };
+      }
+    } catch {
+      // Fall through to AI as a final fallback.
+    }
   }
 
   const client = createOpenAIClient(state);
