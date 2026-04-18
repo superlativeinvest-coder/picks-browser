@@ -51,4 +51,4 @@ That means you can keep the current local JSON workflow, but production state on
    - `VERCEL_BLOB_STATE_PATH=state/app-state.json`
 4. Deploy.
 
-The frontend builds to `dist`, and `/api/*` is served by the Vercel function in `api/[[...route]].js`.
+The frontend builds to `dist`, and `/api/*` is served by the Vercel function in `api/[...route].js`.

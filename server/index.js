@@ -682,6 +682,59 @@ const buildAiPlayerResearch = async (state, payload) => {
 };
 
 const buildAiGameRoster = async (state, payload) => {
+  try {
+    const gamesResponse = await bdlFetch(state, "/v1/games", {
+      dates: [payload.date],
+      per_page: 100,
+    });
+    const games = gamesResponse.data || [];
+    const game = games.find((item) => {
+      const homeAbbr = item.home_team?.abbreviation;
+      const awayAbbr = item.visitor_team?.abbreviation;
+      return homeAbbr === payload.homeTeam && awayAbbr === payload.awayTeam;
+    });
+
+    if (game?.id) {
+      const lineupResponse = await bdlFetch(state, "/v1/lineups", {
+        game_ids: [game.id],
+        per_page: 100,
+      });
+      const lineupRows = lineupResponse.data || [];
+
+      const buildTeamGroup = (teamId, fallbackName) => {
+        const teamRows = lineupRows.filter((row) => row.team?.id === teamId || row.team_id === teamId);
+        const starters = teamRows
+          .filter((row) => row.starter)
+          .map((row) => `${row.player?.first_name || ""} ${row.player?.last_name || ""}`.trim())
+          .filter(Boolean);
+        const bench = teamRows
+          .filter((row) => !row.starter)
+          .map((row) => `${row.player?.first_name || ""} ${row.player?.last_name || ""}`.trim())
+          .filter(Boolean);
+
+        return {
+          name: teamRows[0]?.team?.full_name || fallbackName,
+          starters: starters.slice(0, 5),
+          bench: bench.slice(0, 10),
+        };
+      };
+
+      const homeGroup = buildTeamGroup(game.home_team?.id, game.home_team?.full_name || payload.homeTeam);
+      const awayGroup = buildTeamGroup(game.visitor_team?.id, game.visitor_team?.full_name || payload.awayTeam);
+
+      if (homeGroup.starters.length || awayGroup.starters.length || homeGroup.bench.length || awayGroup.bench.length) {
+        return {
+          gameSummary: `Live lineup data loaded for ${payload.matchup}.`,
+          homeTeam: homeGroup,
+          awayTeam: awayGroup,
+          sourceNotes: "Roster card built from BallDontLie lineups for this game.",
+        };
+      }
+    }
+  } catch {
+    // Fall back to AI roster research when live lineup data is unavailable.
+  }
+
   const client = createOpenAIClient(state);
   const response = await client.responses.create({
     model: OPENAI_MODEL,
