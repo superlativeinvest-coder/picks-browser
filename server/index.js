@@ -8,6 +8,7 @@ import OpenAI from "openai";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { runNbaPropResearchSkill } from "../src/lib/research/runNbaPropResearchSkill.js";
 
 dotenv.config();
 
@@ -471,6 +472,51 @@ Rules:
 - Bench lists do not need to be exhaustive; include the main playable bench names.
 - Output ONLY raw JSON. No markdown.
 `;
+
+const buildResearchSkillInput = ({ payload, lineSummary }) => {
+  const selectedLine = toNumberOrNull(payload.sleeperLine) ?? toNumberOrNull(payload.prizePicksLine) ?? toNumberOrNull(payload.sharpConsensus);
+  const teammateImpact = [payload.manualInjuryBoost, ...(Array.isArray(payload.teammateImpact) ? payload.teammateImpact : [])].filter(Boolean);
+  const injuryNotes = Array.isArray(payload.injuryNotes) ? payload.injuryNotes.filter(Boolean) : [];
+  const rotationNotes = [payload.manualRoleNote, ...(Array.isArray(payload.rotationNotes) ? payload.rotationNotes : [])].filter(Boolean);
+  const matchupNotes = [payload.manualPaceNote, ...(Array.isArray(payload.matchupNotes) ? payload.matchupNotes : [])].filter(Boolean);
+  const expectedMinutes = payload.manualMinutes ? String(payload.manualMinutes) : undefined;
+  const roleTag = payload.manualRoleNote
+    ? /bench|sixth|reserve/i.test(payload.manualRoleNote)
+      ? "BENCH"
+      : /primary|lead|alpha|first option/i.test(payload.manualRoleNote)
+        ? "PRIMARY"
+        : "SECONDARY"
+    : "SECONDARY";
+  const startingStatus = payload.context && /starting|starter/i.test(payload.context)
+    ? "CONFIRMED"
+    : roleTag === "BENCH"
+      ? "UNCERTAIN"
+      : "LIKELY";
+
+  return {
+    player: payload.player,
+    team: payload.teamTag || "Unknown",
+    opponent: payload.opponentTag || "Unknown",
+    stat: ({
+      points: "PTS",
+      rebounds: "REB",
+      assists: "AST",
+      pra: "PRA",
+    }[payload.stat] || "PTS"),
+    line: selectedLine ?? 0,
+    isHome: Boolean(payload.isHome),
+    spread: toNumberOrNull(payload.spread),
+    total: toNumberOrNull(payload.total),
+    backToBack: Boolean(payload.backToBack),
+    startingStatus,
+    expectedMinutes,
+    roleTag,
+    teammateImpact,
+    injuryNotes,
+    rotationNotes,
+    matchupNotes: [...matchupNotes, `Line quality: ${lineSummary.lineQuality}`].filter(Boolean),
+  };
+};
 
 const bdlFetch = async (state, endpoint, query = {}) => {
   const apiKey = getApiKeys(state).ballDontLie;
@@ -1068,6 +1114,16 @@ const buildPropAnalysis = async (state, payload) => {
     prizePicksLine: payload.prizePicksLine,
     sharpConsensus: liveContext.sharpConsensus,
   });
+  const useResearchSkill = liveContext.sharpConsensus == null && Boolean(getApiKeys(state).openai);
+  const decisionEngineLabel = useResearchSkill ? "Context-Backed Decision" : "Market-Backed Decision";
+  let skillResult = null;
+
+  if (useResearchSkill) {
+    skillResult = await runNbaPropResearchSkill(
+      buildResearchSkillInput({ payload, lineSummary }),
+      { apiKey: getApiKeys(state).openai, model: OPENAI_MODEL },
+    );
+  }
 
   const recommendedPct =
     lineSummary.lineQuality === "SOFT" ? 10 : lineSummary.lineQuality === "NEUTRAL" ? 5 : 2.5;
@@ -1085,7 +1141,8 @@ const buildPropAnalysis = async (state, payload) => {
   const primaryLine = toNumberOrNull(payload.sleeperLine) ?? toNumberOrNull(payload.prizePicksLine);
   const recentGap = manualRecentAverage != null && primaryLine != null ? round(manualRecentAverage - primaryLine, 1) : null;
   const finalVerdict =
-    lineSummary.lineQuality === "SHARP" && !hasManualContextEdge && liveContext.recentGames.average <= Number.parseFloat(payload.sleeperLine || payload.prizePicksLine || 0)
+    skillResult?.verdict ||
+    (lineSummary.lineQuality === "SHARP" && !hasManualContextEdge && liveContext.recentGames.average <= Number.parseFloat(payload.sleeperLine || payload.prizePicksLine || 0)
       ? "SKIP"
       : lineSummary.lineQuality === "UNKNOWN" && liveContext.sharpConsensus == null
         ? manualSampleSize != null && manualSampleSize < 3
@@ -1095,13 +1152,14 @@ const buildPropAnalysis = async (state, payload) => {
             : recentGap != null && recentGap <= -2
               ? "LESS"
               : "SKIP"
-        : lineSummary.verdict;
+        : lineSummary.verdict);
   const confidence =
-    lineSummary.lineQuality === "SOFT"
+    skillResult?.confidence ||
+    (lineSummary.lineQuality === "SOFT"
       ? hasManualContextEdge ? "Medium-High" : "Medium"
       : lineSummary.lineQuality === "NEUTRAL"
         ? hasManualContextEdge ? "Medium" : "Medium-Low"
-        : hasManualContextEdge ? "Medium-Low" : "Low";
+        : hasManualContextEdge ? "Medium-Low" : "Low");
   const notesCount = [
     payload.manualRecentLog,
     manualInjuryBoost,
@@ -1110,7 +1168,9 @@ const buildPropAnalysis = async (state, payload) => {
     payload.context,
   ].filter(Boolean).length;
   let aiSummary = "";
-  const researchConfidence = getResearchConfidence({
+  const researchConfidence = skillResult?.confidence
+    ? skillResult.confidence.toLowerCase()
+    : getResearchConfidence({
     providerUsed: Boolean(payload.providerUsed),
     sharpConsensus: liveContext.sharpConsensus,
     manualRecentAverage,
@@ -1166,8 +1226,14 @@ const buildPropAnalysis = async (state, payload) => {
     aiSummary = parseOpenAIText(response);
   }
 
+  if (skillResult?.decisionExplanation) {
+    aiSummary = skillResult.decisionExplanation;
+  }
+
   return {
     lineSummary,
+    decisionEngineLabel,
+    researchSkill: skillResult,
     liveContext,
     bankroll: {
       recommendedPct: bankrollPct,

@@ -1,0 +1,182 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NbaPropResearchResult",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "verdict",
+    "confidence",
+    "propSummary",
+    "roleContext",
+    "gameContext",
+    "matchupContext",
+    "supportFlags",
+    "riskFlags",
+    "estimatedRange",
+    "scoring",
+    "decisionExplanation",
+    "uiSummary"
+  ],
+  "properties": {
+    "verdict": {
+      "type": "string",
+      "enum": ["MORE", "LESS", "SKIP"]
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["LOW", "MEDIUM", "HIGH"]
+    },
+    "propSummary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "roleContext": {
+      "type": "string",
+      "minLength": 1
+    },
+    "gameContext": {
+      "type": "string",
+      "minLength": 1
+    },
+    "matchupContext": {
+      "type": "string",
+      "minLength": 1
+    },
+    "supportFlags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "maxItems": 8
+    },
+    "riskFlags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "maxItems": 8
+    },
+    "estimatedRange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["low", "high", "label"],
+      "properties": {
+        "low": {
+          "type": "number"
+        },
+        "high": {
+          "type": "number"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "scoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "environment",
+        "matchup",
+        "support",
+        "riskPenalty",
+        "total",
+        "roleStability",
+        "environmentLean",
+        "matchupLean",
+        "clearancePath"
+      ],
+      "properties": {
+        "role": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 30
+        },
+        "environment": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 20
+        },
+        "matchup": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 20
+        },
+        "support": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 15
+        },
+        "riskPenalty": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 15
+        },
+        "total": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "roleStability": {
+          "type": "string",
+          "enum": ["STABLE", "FRINGE", "VOLATILE"]
+        },
+        "environmentLean": {
+          "type": "string",
+          "enum": ["POSITIVE", "NEUTRAL", "NEGATIVE"]
+        },
+        "matchupLean": {
+          "type": "string",
+          "enum": ["FAVORABLE", "NEUTRAL", "TOUGH"]
+        },
+        "clearancePath": {
+          "type": "string",
+          "enum": ["CLEAR", "NARROW", "FRAGILE"]
+        }
+      }
+    },
+    "decisionExplanation": {
+      "type": "string",
+      "minLength": 1
+    },
+    "uiSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "why", "support", "risk", "range"],
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "why": {
+          "type": "string",
+          "minLength": 1
+        },
+        "support": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "maxItems": 5
+        },
+        "risk": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "maxItems": 5
+        },
+        "range": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}
