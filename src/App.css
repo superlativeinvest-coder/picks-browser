@@ -402,6 +402,21 @@
   color: #b9c8dc;
 }
 
+.chip.success {
+  background: rgba(109, 214, 152, 0.14);
+  color: #c8f8dc;
+}
+
+.chip.warning {
+  background: rgba(246, 189, 96, 0.14);
+  color: #ffe3b0;
+}
+
+.chip.danger {
+  background: rgba(248, 113, 113, 0.14);
+  color: #ffc4c4;
+}
+
 .chip-row {
   display: flex;
   flex-wrap: wrap;
@@ -505,6 +520,22 @@ textarea {
 
 .workflow-card.final {
   border-color: rgba(246, 189, 96, 0.45);
+}
+
+.workflow-card.warning {
+  border-color: rgba(246, 189, 96, 0.45);
+  background: rgba(44, 28, 12, 0.82);
+}
+
+.research-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.research-chips {
+  margin-top: 0.9rem;
 }
 
 .step-label {
@@ -782,7 +813,8 @@ textarea {
   .slate-grid,
   .workflow-grid,
   .session-grid,
-  .player-stack {
+  .player-stack,
+  .research-columns {
     grid-template-columns: 1fr;
   }
 

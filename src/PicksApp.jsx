@@ -132,6 +132,14 @@ function StatSelector({ options, value, onSelect }) {
   );
 }
 
+function ResearchSignalChip({ label, value, tone = "muted" }) {
+  return (
+    <span className={`chip ${tone}`}>
+      {label}: {value}
+    </span>
+  );
+}
+
 export default function PicksApp() {
   const [snapshot, setSnapshot] = useState(null);
   const [activeTab, setActiveTab] = useState("slate");
@@ -1048,6 +1056,83 @@ export default function PicksApp() {
                 </div>
                 {propAnalysis.aiSummary ? <p className="ai-summary">{propAnalysis.aiSummary}</p> : null}
               </article>
+
+              {propAnalysis.researchSkill ? (
+                <article className={`workflow-card research-result ${propAnalysis.researchSkill.verdict === "SKIP" ? "warning" : ""}`}>
+                  <p className="step-label">{propAnalysis.decisionEngineLabel || "Context-Backed Decision"}</p>
+                  <h3>{propAnalysis.researchSkill.uiSummary?.title || `Research Verdict: ${propAnalysis.researchSkill.verdict}`}</h3>
+                  <p>{propAnalysis.researchSkill.uiSummary?.why || propAnalysis.researchSkill.decisionExplanation}</p>
+                  <div className="chip-row research-chips">
+                    <ResearchSignalChip
+                      label="Role"
+                      value={propAnalysis.researchSkill.scoring?.roleStability || "N/A"}
+                      tone={
+                        propAnalysis.researchSkill.scoring?.roleStability === "STABLE"
+                          ? "success"
+                          : propAnalysis.researchSkill.scoring?.roleStability === "FRINGE"
+                            ? "warning"
+                            : "danger"
+                      }
+                    />
+                    <ResearchSignalChip
+                      label="Matchup"
+                      value={propAnalysis.researchSkill.scoring?.matchupLean || "N/A"}
+                      tone={
+                        propAnalysis.researchSkill.scoring?.matchupLean === "FAVORABLE"
+                          ? "success"
+                          : propAnalysis.researchSkill.scoring?.matchupLean === "NEUTRAL"
+                            ? "warning"
+                            : "danger"
+                      }
+                    />
+                    <ResearchSignalChip
+                      label="Environment"
+                      value={propAnalysis.researchSkill.scoring?.environmentLean || "N/A"}
+                      tone={
+                        propAnalysis.researchSkill.scoring?.environmentLean === "POSITIVE"
+                          ? "success"
+                          : propAnalysis.researchSkill.scoring?.environmentLean === "NEUTRAL"
+                            ? "warning"
+                            : "danger"
+                      }
+                    />
+                    <ResearchSignalChip
+                      label="Fragility"
+                      value={propAnalysis.researchSkill.scoring?.clearancePath || "N/A"}
+                      tone={
+                        propAnalysis.researchSkill.scoring?.clearancePath === "CLEAR"
+                          ? "success"
+                          : propAnalysis.researchSkill.scoring?.clearancePath === "NARROW"
+                            ? "warning"
+                            : "danger"
+                      }
+                    />
+                  </div>
+                  <div className="card-metrics">
+                    <span>Confidence {propAnalysis.researchSkill.confidence}</span>
+                    <span>Range {propAnalysis.researchSkill.uiSummary?.range || propAnalysis.researchSkill.estimatedRange?.label}</span>
+                    <span>Score {propAnalysis.researchSkill.scoring?.total ?? "N/A"}</span>
+                  </div>
+                  <div className="research-columns">
+                    <div>
+                      <p className="roster-label">Support</p>
+                      <ul className="plain-list">
+                        {(propAnalysis.researchSkill.uiSummary?.support || propAnalysis.researchSkill.supportFlags || []).map((item) => (
+                          <li key={`support-${item}`}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <p className="roster-label">Risk</p>
+                      <ul className="plain-list">
+                        {(propAnalysis.researchSkill.uiSummary?.risk || propAnalysis.researchSkill.riskFlags || []).map((item) => (
+                          <li key={`risk-${item}`}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </article>
+              ) : null}
 
               <article className="workflow-card">
                 <p className="step-label">3. Bankroll Sizing</p>
