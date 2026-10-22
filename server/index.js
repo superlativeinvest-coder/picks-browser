@@ -1462,8 +1462,18 @@ const getSlate = async (state, date, days = 1) => {
 };
 
 const app = express();
-app.use(cors());
+app.use(cors({ origin: false }));
 app.use(express.json({ limit: "1mb" }));
+
+// This app stores personal bankroll, journal, picks, and optional provider
+// credentials in shared state. Keep the API fail-closed in production until
+// Vercel project-level access control is enabled.
+app.use("/api", (req, res, next) => {
+  if (process.env.VERCEL_ENV === "production" && process.env.PICKS_BROWSER_API_ENABLED !== "true") {
+    return res.status(404).json({ error: "API unavailable" });
+  }
+  return next();
+});
 
 app.get("/api/bootstrap", async (req, res) => {
   res.json(appSnapshot(await readState()));

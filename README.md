@@ -28,6 +28,10 @@ Important variables:
 - `BALLDONTLIE_API_KEY`
 - `ODDS_API_KEY`
 - `BLOB_READ_WRITE_TOKEN`
+
+Production API access is disabled by default with `PICKS_BROWSER_API_ENABLED`.
+Enable it only after the Vercel project is protected with authenticated access
+and the API routes have been reviewed for the intended users.
 - `VERCEL_BLOB_STATE_PATH`
 
 ## Persistence model
